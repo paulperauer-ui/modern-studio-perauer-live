@@ -548,9 +548,18 @@ export default function App() {
               </div>
               <div className="location-body">
                 <div className="activity-grid">
-                  <div className="activity"><Mountain size={18} /><span>{lang === "de" ? "Klettern" : "Climbing"}</span></div>
-                  <div className="activity"><Trees size={18} /><span>{lang === "de" ? "Wandern" : "Hiking"}</span></div>
-                  <div className="activity"><Snowflake size={18} /><span>{lang === "de" ? "Skifahren" : "Skiing"}</span></div>
+                  <a className="activity activity-link" href="https://maps.google.com/?q=Kletterwand+Maltatal" target="_blank" rel="noreferrer">
+                    <Mountain size={18} />
+                    <span>{lang === "de" ? "Klettern" : "Climbing"}</span>
+                  </a>
+                  <a className="activity activity-link" href="https://www.nockberge.at/" target="_blank" rel="noreferrer">
+                    <Trees size={18} />
+                    <span>{lang === "de" ? "Wandern" : "Hiking"}</span>
+                  </a>
+                  <a className="activity activity-link" href="https://www.katschberg.at/" target="_blank" rel="noreferrer">
+                    <Snowflake size={18} />
+                    <span>{lang === "de" ? "Skifahren" : "Skiing"}</span>
+                  </a>
                 </div>
                 <div className="address-box">
                   <strong>{lang === "de" ? "Adresse:" : "Address:"}</strong><br />
