@@ -181,7 +181,7 @@ function Lightbox({ images, index, onClose, onPrev, onNext }) {
           touchStart.current = null;
         }}
       >
-        <img className="lightbox-image" src={image.src} alt={image.alt} />
+        <img className="lightbox-image" src={image.src} alt={image.alt} decoding="async" />
       </div>
     </div>
   );
@@ -210,7 +210,7 @@ function Gallery({ lang, onOpen }) {
                   title={lang === "de" ? "Bild groß öffnen" : "Open image large"}
                   aria-label={lang === "de" ? "Bild groß öffnen" : "Open image large"}
                 >
-                  <img src={img.src} alt={img.alt} />
+                  <img src={img.src} alt={img.alt} loading="lazy" decoding="async" />
                   <div className="gallery-overlay">
                     {lang === "de" ? "Vollbild öffnen" : "Open fullscreen"}
                   </div>
@@ -258,18 +258,37 @@ function dateKey(date) {
 }
 
 function AvailabilityCalendar({ lang }) {
-  const [data, setData] = useState({ unavailableDates: [] });
+  const [data, setData] = useState({ unavailableDates: [], available: null, partial: false });
   const [loading, setLoading] = useState(true);
   const [monthOffset, setMonthOffset] = useState(0);
 
   useEffect(() => {
-    fetch("/api/availability")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    let active = true;
+
+    const loadAvailability = async () => {
+      try {
+        const res = await fetch(`/api/availability?ts=${Date.now()}`, { cache: "no-store" });
+        const json = await res.json();
+        if (!active) return;
+        setData({
+          ...json,
+          available: res.ok && json.available !== false,
+          partial: Boolean(json.partial),
+        });
+      } catch (error) {
+        if (!active) return;
+        setData({ unavailableDates: [], available: false, partial: false });
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadAvailability();
+    const interval = window.setInterval(loadAvailability, 5 * 60 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   const unavailable = useMemo(() => new Set(data.unavailableDates || []), [data.unavailableDates]);
@@ -278,6 +297,17 @@ function AvailabilityCalendar({ lang }) {
     return [0, 1].map((offset) => new Date(base.getFullYear(), base.getMonth() + monthOffset + offset, 1));
   }, [monthOffset]);
 
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const reliable = data.available !== false && !data.partial;
+  const whatsappInquiry = lang === "de"
+    ? "https://wa.me/436707019210?text=Hallo%20Paul%2C%20ich%20interessiere%20mich%20f%C3%BCr%20das%20Modern%20Studio%20Perauer.%20Ich%20w%C3%BCrde%20gern%20einen%20Zeitraum%20anfragen."
+    : "https://wa.me/436707019210?text=Hi%20Paul%2C%20I%27m%20interested%20in%20Modern%20Studio%20Perauer%20and%20would%20like%20to%20ask%20about%20some%20dates.";
+
   return (
     <div className="availability-wrap">
       <div className="availability-head">
@@ -285,28 +315,51 @@ function AvailabilityCalendar({ lang }) {
           <div className="small-kicker">{lang === "de" ? "Live-Kalender" : "Live calendar"}</div>
           <h3>{lang === "de" ? "Verfügbarkeit auf einen Blick" : "Availability at a glance"}</h3>
         </div>
-        <div className="legend">
-          <span><i className="legend-box available"></i>{lang === "de" ? "frei" : "available"}</span>
-          <span><i className="legend-box unavailable"></i>{lang === "de" ? "belegt" : "booked"}</span>
-        </div>
+        {reliable ? (
+          <div className="legend">
+            <span><i className="legend-box available"></i>{lang === "de" ? "frei" : "available"}</span>
+            <span><i className="legend-box unavailable"></i>{lang === "de" ? "belegt" : "booked"}</span>
+          </div>
+        ) : null}
       </div>
 
-      <div className="calendar-nav">
-        <button type="button" className="calendar-nav-btn" onClick={() => setMonthOffset((v) => v - 1)}>
-          <ChevronLeft size={16} />
-          {lang === "de" ? "frühere Monate" : "earlier months"}
-        </button>
-        <button type="button" className="calendar-nav-btn" onClick={() => setMonthOffset((v) => v + 1)}>
-          {lang === "de" ? "spätere Monate" : "later months"}
-          <ChevronRightIcon size={16} />
-        </button>
-      </div>
+      {!loading && !reliable ? (
+        <div className="availability-status-message availability-status-error">
+          {data.partial
+            ? (lang === "de"
+                ? "Die Verfügbarkeit kann gerade nicht zuverlässig angezeigt werden, weil nicht alle Kalenderquellen erreichbar sind. Bitte den gewünschten Zeitraum direkt per E-Mail, Telefon oder WhatsApp anfragen."
+                : "Availability cannot currently be shown reliably because not all calendar sources are reachable. Please ask about your preferred dates directly by email, phone or WhatsApp.")
+            : (lang === "de"
+                ? "Die Verfügbarkeit kann gerade nicht geladen werden. Bitte den gewünschten Zeitraum direkt per E-Mail, Telefon oder WhatsApp anfragen."
+                : "Availability cannot be loaded right now. Please ask about your preferred dates directly by email, phone or WhatsApp.")}
+        </div>
+      ) : null}
+
+      {reliable ? (
+        <div className="calendar-nav">
+          <button
+            type="button"
+            className="calendar-nav-btn"
+            onClick={() => setMonthOffset((v) => Math.max(0, v - 1))}
+            disabled={monthOffset === 0}
+            aria-disabled={monthOffset === 0}
+            title={monthOffset === 0 ? (lang === "de" ? "Frühere Monate sind nicht relevant." : "Earlier months are not relevant.") : ""}
+          >
+            <ChevronLeft size={16} />
+            {lang === "de" ? "frühere Monate" : "earlier months"}
+          </button>
+          <button type="button" className="calendar-nav-btn" onClick={() => setMonthOffset((v) => v + 1)}>
+            {lang === "de" ? "spätere Monate" : "later months"}
+            <ChevronRightIcon size={16} />
+          </button>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="availability-loading">
           {lang === "de" ? "Kalender wird geladen ..." : "Loading calendar ..."}
         </div>
-      ) : (
+      ) : reliable ? (
         <div className="calendar-grid-two">
           {months.map((monthDate) => {
             const days = getMonthGrid(monthDate);
@@ -320,6 +373,10 @@ function AvailabilityCalendar({ lang }) {
                   {days.map((day) => {
                     const inMonth = day.getMonth() === monthDate.getMonth();
                     const isUnavailable = unavailable.has(dateKey(day));
+                    const normalized = new Date(day);
+                    normalized.setHours(0, 0, 0, 0);
+                    const isPast = inMonth && normalized < today;
+                    const isToday = inMonth && normalized.getTime() === today.getTime();
                     return (
                       <div
                         key={dateKey(day)}
@@ -327,6 +384,8 @@ function AvailabilityCalendar({ lang }) {
                           "calendar-day",
                           inMonth ? "" : "outside",
                           isUnavailable ? "booked" : "free",
+                          isPast ? "past" : "",
+                          isToday ? "today" : "",
                         ].join(" ").trim()}
                       >
                         {day.getDate()}
@@ -338,13 +397,32 @@ function AvailabilityCalendar({ lang }) {
             );
           })}
         </div>
-      )}
+      ) : null}
 
       <p className="calendar-note">
         {lang === "de"
           ? "Die Verfügbarkeit wird automatisch synchronisiert und dient als Orientierung. Bitte deinen Wunschzeitraum dennoch direkt per E-Mail, Telefon oder WhatsApp bestätigen lassen."
           : "Availability syncs automatically and is shown for guidance. Please still confirm your preferred dates directly by email, phone or WhatsApp."}
       </p>
+
+      <div className="direct-inquiry-card">
+        <div className="direct-inquiry-title">
+          {lang === "de" ? "Freien Zeitraum gefunden?" : "Found dates that work for you?"}
+        </div>
+        <p className="direct-inquiry-copy">
+          {lang === "de"
+            ? "Dann schreib mir einfach direkt. Persönlicher Kontakt, flexible Absprache und unkomplizierter Self Check-in – auch mit Haustier."
+            : "Just message me directly. Personal contact, flexible arrangements and easy self check-in – pets are welcome too."}
+        </p>
+        <div className="direct-inquiry-actions">
+          <a className="direct-inquiry-btn direct-inquiry-primary" href={whatsappInquiry} target="_blank" rel="noopener noreferrer">
+            {lang === "de" ? "Direkt per WhatsApp anfragen" : "Ask directly on WhatsApp"}
+          </a>
+          <a className="direct-inquiry-btn direct-inquiry-secondary" href="tel:+436707019210">
+            {lang === "de" ? "Anrufen" : "Call"}
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -378,7 +456,7 @@ export default function App() {
       },
       facts: {
         title: "Auf einen Blick",
-        items: ["Studio für 1–2 Personen", "1 Schlafzimmer · 1 Doppelbett · 1 Bad", "22 m² frisch renoviert", "Einbauküche mit Geschirrspüler", "Regendusche im modernen Bad", "WLAN & Arbeitsplatz", "Haustiere erlaubt: 30 € pro Aufenthalt", "Check-in ab 15:00 · Check-out bis 10:00"],
+        items: ["Studio für 1–2 Personen", "Schlafbereich · Doppelbett · eigenes Bad", "22 m² frisch renoviert", "Einbauküche mit Geschirrspüler", "Regendusche im modernen Bad", "WLAN & Arbeitsplatz", "Haustiere erlaubt: 30 € pro Aufenthalt", "Check-in ab 15:00 · Check-out bis 10:00"],
       },
       features: {
         title: "Alles, was man braucht",
@@ -392,8 +470,8 @@ export default function App() {
       audience: { title: "Ideal für", items: ["Paare", "Junge Reisende", "Kletterer", "Wanderer", "Skifahrer", "Alle, die Qualität ohne Schnickschnack wollen"] },
       reviews: {
         title: "Bewertungen & Inserate",
-        text: "Die Unterkunft wird auf beiden Plattformen sehr gut bewertet. Airbnb zeigt 4,97 von 5 Sternen aus 30 Bewertungen; Booking.com führt 9,4 von 10 aus 41 Bewertungen. Besonders häufig genannt werden Sauberkeit, Ausstattung, Lage und unkomplizierter Check-in.",
-        stats: ["Airbnb: 4,97 / 5", "30 Airbnb-Bewertungen", "Booking.com: 9,4 / 10", "41 Booking-Bewertungen"],
+        text: "Die Unterkunft wird auf Airbnb und Booking.com hervorragend bewertet. Besonders häufig genannt werden Sauberkeit, Ausstattung, Lage und der unkomplizierte Check-in. Die aktuellen Bewertungen findest du direkt auf den beiden Plattformen.",
+        stats: ["Hervorragend bewertet auf Airbnb", "Hervorragend bewertet auf Booking.com"],
         airbnb: "Airbnb ansehen",
         booking: "Booking.com ansehen",
       },
@@ -409,7 +487,7 @@ export default function App() {
         { label: "Kölnbreinsperre", icon: MountainSnow },
         { label: "Radfahren im Sommer", icon: Bike },
       ],
-      pricing: { title: "Preise & Buchung", price: "ab 65 € / Nacht", note: "Der genaue Preis richtet sich nach Personenzahl und Aufenthaltsdauer. Wochen- und Monatsrabatte sind möglich.", payment: "Bezahlung vor Ort in bar." },
+      pricing: { title: "Preise & Buchung", price: "ab 65 € / Nacht", note: "Der genaue Preis richtet sich nach Personenzahl und Aufenthaltsdauer. Endreinigung: 30 € pro Aufenthalt. Zzgl. gesetzlicher Ortstaxe. Wochen- und Monatsrabatte sind möglich.", payment: "Bezahlung vor Ort in bar." },
       availability: { title: "Verfügbarkeit", text: "Hier siehst du die nächsten freien und belegten Tage. Du kannst auch zu späteren Monaten weiterblättern." },
       contact: { title: "Direkt anfragen", text: "Am besten direkt per E-Mail, Telefon oder WhatsApp anfragen. So bleibt es persönlich, einfach und ohne unnötige Plattformgebühren.", phoneLabel: "Telefon", mailLabel: "E-Mail", addressLabel: "Adresse", phone: "+43 670 7019210", mail: "perauerappartments@gmail.com", address: "Waschanger 33, 9853 Gmünd in Kärnten, Österreich", ctaMail: "E-Mail schreiben", ctaCall: "Anrufen", ctaWhatsApp: "WhatsApp" },
       legal: {
@@ -431,7 +509,7 @@ export default function App() {
           "Sie haben grundsätzlich das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch.",
         ],
       },
-      footer: { line1: "Modern Studio Perauer", line2: "Modern. Gemütlich. Zentral. Ein richtig guter Deal." },
+      footer: { line1: "Modern Studio Perauer", line2: "Persönlich. Flexibel. Unkompliziert." },
     },
     en: {
       nav: { stay: "Studio", gallery: "Gallery", features: "Features", location: "Location", pricing: "Pricing", availability: "Availability", contact: "Contact", legal: "Legal" },
@@ -457,7 +535,7 @@ export default function App() {
       },
       facts: {
         title: "At a glance",
-        items: ["Studio for 1–2 guests", "1 bedroom · 1 double bed · 1 bath", "22 m² freshly renovated", "Built-in kitchen with dishwasher", "Rain shower in a stylish bathroom", "Wi‑Fi & workspace", "Pets welcome: €30 per stay", "Check-in from 15:00 · Check-out until 10:00"],
+        items: ["Studio for 1–2 guests", "Sleeping area · double bed · private bathroom", "22 m² freshly renovated", "Built-in kitchen with dishwasher", "Rain shower in a stylish bathroom", "Wi‑Fi & workspace", "Pets welcome: €30 per stay", "Check-in from 15:00 · Check-out until 10:00"],
       },
       features: {
         title: "Everything you need",
@@ -471,8 +549,8 @@ export default function App() {
       audience: { title: "Perfect for", items: ["Couples", "Young travellers", "Climbers", "Hikers", "Skiers", "Anyone who wants quality without fuss"] },
       reviews: {
         title: "Reviews & listings",
-        text: "The property is rated very well on both platforms. Airbnb shows 4.97 out of 5 from 30 reviews; Booking.com lists 9.4 out of 10 from 41 reviews. Guests especially mention cleanliness, equipment, location and easy check-in.",
-        stats: ["Airbnb: 4.97 / 5", "30 Airbnb reviews", "Booking.com: 9.4 / 10", "41 Booking reviews"],
+        text: "The property is highly rated on both Airbnb and Booking.com. Guests especially mention cleanliness, equipment, location and easy check-in. You can find the latest ratings directly on the two platforms.",
+        stats: ["Highly rated on Airbnb", "Highly rated on Booking.com"],
         airbnb: "View on Airbnb",
         booking: "View on Booking.com",
       },
@@ -488,7 +566,7 @@ export default function App() {
         { label: "Kölnbrein dam", icon: MountainSnow },
         { label: "Cycling in summer", icon: Bike },
       ],
-      pricing: { title: "Pricing & booking", price: "from €65 / night", note: "The exact rate depends on the number of guests and length of stay. Weekly and monthly discounts are available.", payment: "Payment on site in cash." },
+      pricing: { title: "Pricing & booking", price: "from €65 / night", note: "The exact rate depends on the number of guests and length of stay. Final cleaning: €30 per stay. Plus the applicable local tourist tax. Weekly and monthly discounts are available.", payment: "Payment on site in cash." },
       availability: { title: "Availability", text: "Here you can see upcoming free and booked dates. You can also browse forward to later months." },
       contact: { title: "Send a direct inquiry", text: "The easiest way is to contact us directly by email, phone or WhatsApp. Personal, simple and without unnecessary platform fees.", phoneLabel: "Phone", mailLabel: "Email", addressLabel: "Address", phone: "+43 670 7019210", mail: "perauerappartments@gmail.com", address: "Waschanger 33, 9853 Gmünd in Carinthia, Austria", ctaMail: "Send email", ctaCall: "Call now", ctaWhatsApp: "WhatsApp" },
       legal: {
@@ -510,7 +588,7 @@ export default function App() {
           "You generally have rights of access, rectification, deletion, restriction, data portability and objection.",
         ],
       },
-      footer: { line1: "Modern Studio Perauer", line2: "Modern. Cosy. Central. A really good deal." },
+      footer: { line1: "Modern Studio Perauer", line2: "Personal. Flexible. Easy." },
     },
   }), []);
 
@@ -556,7 +634,7 @@ export default function App() {
           </motion.div>
 
           <motion.div className="hero-image-wrap" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}>
-            <img className="hero-image" src="/images/hero-bed.jpg" alt="Modern Studio Perauer" />
+            <img className="hero-image" src="/images/hero-bed.jpg" alt="Modern Studio Perauer" loading="eager" fetchPriority="high" decoding="async" />
             <div className="hero-overlay-card">
               <div className="overlay-kicker">Modern Studio Perauer</div>
               <div className="overlay-title">{c.hero.overlayTitle}</div>
