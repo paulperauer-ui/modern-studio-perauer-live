@@ -1,0 +1,9 @@
+.direct-inquiry-card{margin-top:18px;padding:22px;border:1px solid rgba(0,0,0,.08);border-radius:24px;background:linear-gradient(180deg,#f3eadf 0%,#ece1d5 100%);box-shadow:0 10px 28px rgba(0,0,0,.04)}
+.direct-inquiry-title{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.direct-inquiry-copy{margin:8px 0 0;color:#5f5a53;line-height:1.7;max-width:760px}
+.direct-inquiry-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.direct-inquiry-btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:999px;font-weight:800;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.direct-inquiry-btn:hover{transform:translateY(-1px)}
+.direct-inquiry-primary{background:#171717;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.direct-inquiry-secondary{background:#fff;color:#171717;border:1px solid rgba(0,0,0,.10)}
+@media(max-width:640px){.direct-inquiry-card{padding:18px}.direct-inquiry-actions{flex-direction:column}.direct-inquiry-btn{width:100%}}
