@@ -46,3 +46,5 @@ v4:
 - WhatsApp-Button ergänzt
 - stärkere mobile Darstellung
 - hochwertigeres Homepage-Layout
+
+<!-- Deployment trigger after reconnecting GitHub and Vercel -->
