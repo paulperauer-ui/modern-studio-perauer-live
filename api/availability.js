@@ -4,9 +4,11 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(icsUrl, {
+      cache: "no-store",
       headers: {
         "User-Agent": "Mozilla/5.0",
         "Accept": "text/calendar,text/plain,*/*",
+        "Cache-Control": "no-cache",
       },
     });
 
@@ -34,7 +36,7 @@ export default async function handler(req, res) {
       }
     }
 
-    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=86400");
+    res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=60");
     return res.status(200).json({
       unavailableDates: Array.from(unavailable).sort(),
       source: "airbnb",
