@@ -110,7 +110,10 @@ h1{font-size:64px;line-height:1.01;letter-spacing:-.04em;margin:18px 0}
 .legend-box.unavailable{background:#2a2a2a}
 .calendar-nav{display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 .calendar-nav-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
+.calendar-nav-btn:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
 .availability-loading{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;color:var(--muted)}
+.availability-status-message{margin-top:16px;border-radius:18px;padding:14px 16px;font-size:14px;line-height:1.65}
+.availability-status-error{background:#fff4e8;border:1px solid rgba(132,72,15,.18);color:#6d3d12}
 .calendar-grid-two{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px}
 .calendar-card{background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:var(--shadow)}
 .calendar-title{font-size:20px;font-weight:800;margin-bottom:14px}
@@ -119,7 +122,18 @@ h1{font-size:64px;line-height:1.01;letter-spacing:-.04em;margin:18px 0}
 .calendar-day{height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid var(--line);background:#eef6ee}
 .calendar-day.booked{background:#1f1f1f;color:#fff;border-color:#1f1f1f}
 .calendar-day.outside{opacity:.35}
+.calendar-day.past{background:#f1f0ed;color:#aaa;border-color:rgba(0,0,0,.05);text-decoration:line-through;opacity:.65}
+.calendar-day.today{position:relative;box-shadow:inset 0 0 0 2px #171717;font-weight:800}
+.calendar-day.today::after{content:"";position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:currentColor}
 .calendar-note{margin-top:14px;color:var(--muted);font-size:14px;line-height:1.7}
+.direct-inquiry-card{margin-top:18px;padding:22px;border:1px solid rgba(0,0,0,.08);border-radius:24px;background:linear-gradient(180deg,#f3eadf 0%,#ece1d5 100%);box-shadow:0 10px 28px rgba(0,0,0,.04)}
+.direct-inquiry-title{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.direct-inquiry-copy{margin:8px 0 0;color:#5f5a53;line-height:1.7;max-width:760px}
+.direct-inquiry-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.direct-inquiry-btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:999px;font-weight:800;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.direct-inquiry-btn:hover{transform:translateY(-1px)}
+.direct-inquiry-primary{background:#171717;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.direct-inquiry-secondary{background:#fff;color:#171717;border:1px solid rgba(0,0,0,.10)}
 .contact-list{display:flex;flex-direction:column;gap:14px;margin-top:28px}
 .contact-label{font-size:13px;color:#666;margin-bottom:6px}
 .contact-item a{text-decoration:underline}
@@ -163,6 +177,9 @@ h1{font-size:64px;line-height:1.01;letter-spacing:-.04em;margin:18px 0}
   .calendar-day{height:34px;font-size:13px}
   .btn{padding:13px 18px}
   .gallery-count-2,.gallery-count-3{grid-template-columns:1fr}
+  .direct-inquiry-card{padding:18px}
+  .direct-inquiry-actions{flex-direction:column}
+  .direct-inquiry-btn{width:100%}
   .lightbox-backdrop{padding:12px}
   .lightbox-image{max-height:82vh;border-radius:12px}
   .lightbox-close,.lightbox-arrow{width:42px;height:42px}
